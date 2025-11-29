@@ -45,7 +45,7 @@ const openHelp = () => {
               ARC TRAITORS
             </h1>
             <p class="text-xs text-red-400/60 tracking-[0.2em] uppercase">
-              Base de datos de traición comunitaria
+              Community Treason Database
             </p>
           </div>
         </div>
