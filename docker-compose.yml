@@ -1,0 +1,52 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: arc-traitors-backend
+    environment:
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - NODE_ENV=production
+      - PORT=33000
+      - CORS_ORIGINS=http://localhost
+      - DATABASE_PATH=/data/votes.db
+    volumes:
+      - ./data:/data
+    networks:
+      - arc-traitors
+    restart: unless-stopped
+    healthcheck:
+      test:
+        ["CMD", "bun", "run", "--bun", "fetch", "http://localhost:33000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: arc-traitors-caddy
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./dist/public:/var/www/public:ro
+      - ./dist/admin:/var/www/admin:ro
+      - ./caddy_data:/data
+      - ./caddy_config:/config
+    networks:
+      - arc-traitors
+    # depends_on:
+    #   backend:
+    #     condition: service_healthy
+    restart: unless-stopped
+    # healthcheck:
+    #   test: ["CMD", "caddy", "version"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+
+networks:
+  arc-traitors:
+    driver: bridge
+    name: arc-traitors-network

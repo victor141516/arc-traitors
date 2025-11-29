@@ -1,0 +1,50 @@
+# Arc Traitors - Caddy Configuration
+# Serves static frontends and proxies backend API
+
+:80 {
+	# API routes - reverse proxy to backend
+	handle /api/* {
+		reverse_proxy backend:33000
+	}
+
+	# Socket.io for real-time features
+	handle /socket.io/* {
+		reverse_proxy backend:33000
+	}
+
+	# Admin dashboard - serve backoffice static files
+	handle /admin/* {
+		uri strip_prefix /admin
+		root * /var/www/admin
+		file_server
+		try_files {path} /index.html
+	}
+
+	# Health check endpoint
+	handle /health {
+		reverse_proxy backend:33000
+	}
+
+	# Main frontend - serve public static files (fallback)
+	handle {
+		root * /var/www/public
+		file_server
+		try_files {path} /index.html
+	}
+
+	# Security headers
+	header {
+		X-Frame-Options DENY
+		X-Content-Type-Options nosniff
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# Logging
+	log {
+		output stdout
+		format console
+		level INFO
+	}
+}

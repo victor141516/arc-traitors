@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #0a0a0a;
+    color: #e5e5e5;
+    font-family: "Courier New", Courier, monospace; /* Monospace for that "terminal/database" feel */
+  }
+}
+
+@layer components {
+  /* TRAITOR THEME */
+
+  /* Main container style - Gritty, warning feel */
+  .traitor-panel {
+    background-color: rgba(20, 10, 10, 0.9);
+    border: 1px solid #4a1a1a;
+    border-radius: 2px;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.1);
+    position: relative;
+  }
+
+  /* Scanline effect overlay */
+  .traitor-panel::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      to bottom,
+      transparent 50%,
+      rgba(0, 0, 0, 0.1) 51%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Corner accents */
+  .traitor-panel::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 1px solid transparent;
+    /* Corner markers */
+    background: linear-gradient(to right, #ff3333 2px, transparent 2px) 0 0,
+      linear-gradient(to bottom, #ff3333 2px, transparent 2px) 0 0,
+      linear-gradient(to left, #ff3333 2px, transparent 2px) 100% 0,
+      linear-gradient(to bottom, #ff3333 2px, transparent 2px) 100% 0,
+      linear-gradient(to right, #ff3333 2px, transparent 2px) 0 100%,
+      linear-gradient(to top, #ff3333 2px, transparent 2px) 0 100%,
+      linear-gradient(to left, #ff3333 2px, transparent 2px) 100% 100%,
+      linear-gradient(to top, #ff3333 2px, transparent 2px) 100% 100%;
+    background-repeat: no-repeat;
+    background-size: 10px 10px;
+    pointer-events: none;
+  }
+
+  /* Danger Button */
+  .btn-report {
+    background-color: #8b0000;
+    color: #ffcccc;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    border: 1px solid #ff0000;
+    padding: 16px 32px;
+    width: 100%;
+    transition: all 0.2s;
+    text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-report:hover {
+    background-color: #ff0000;
+    color: black;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+  }
+
+  .btn-report:disabled {
+    background-color: #331111;
+    border-color: #552222;
+    color: #663333;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* Warning Input */
+  .input-warning {
+    background-color: rgba(0, 0, 0, 0.8);
+    border: 1px solid #552222;
+    color: #ffcccc;
+    padding: 12px 16px;
+    width: 100%;
+    outline: none;
+    font-family: "Courier New", Courier, monospace;
+    transition: all 0.2s;
+  }
+
+  .input-warning:focus {
+    border-color: #ff3333;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+    background-color: rgba(20, 0, 0, 0.8);
+  }
+
+  /* Glitch text effect class */
+  .text-glitch {
+    position: relative;
+    color: #ff3333;
+    text-shadow: 2px 0 #00ffff, -2px 0 #ff00ff;
+  }
+
+  /* Status badges */
+  .badge-traitor {
+    background-color: rgba(255, 0, 0, 0.2);
+    border: 1px solid #ff0000;
+    color: #ff3333;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
