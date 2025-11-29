@@ -21,6 +21,13 @@ import {
   getBans,
   revokeBan,
 } from "./admin";
+import {
+  startAutoTest,
+  stopAutoTest,
+  getAutoTestConfig,
+  isAutoTestEnabled,
+  setSocketIo,
+} from "./autotest";
 import { getCorsOrigins, getPort, getDatabasePath } from "./config";
 
 // CORS Configuration from validated environment variables
@@ -160,6 +167,9 @@ const rateLimiter = (req: Request, res: Response, next: Function) => {
 
   next();
 };
+
+// Set Socket.io instance for autotest
+setSocketIo(io);
 
 // Socket.io connection
 io.on("connection", (socket) => {
@@ -436,6 +446,102 @@ app.delete("/api/admin/bans/:ip", adminAuth, (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
+
+// POST /api/admin/autotest/start - Start auto-testing
+app.post(
+  "/api/admin/autotest/start",
+  adminAuth,
+  (req: Request, res: Response) => {
+    try {
+      const { playerNames, baseIntervalSeconds, randomnessPercent } = req.body;
+
+      if (!Array.isArray(playerNames) || playerNames.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: "playerNames must be a non-empty array",
+        });
+      }
+
+      if (typeof baseIntervalSeconds !== "number" || baseIntervalSeconds <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: "baseIntervalSeconds must be a positive number",
+        });
+      }
+
+      if (
+        typeof randomnessPercent !== "number" ||
+        randomnessPercent < 0 ||
+        randomnessPercent > 100
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "randomnessPercent must be between 0 and 100",
+        });
+      }
+
+      startAutoTest(playerNames, baseIntervalSeconds, randomnessPercent);
+      console.log(
+        `[ADMIN] Auto-testing started by ${req.socket.remoteAddress}`
+      );
+
+      res.json({
+        success: true,
+        message: "Auto-testing started",
+        config: getAutoTestConfig(),
+      });
+    } catch (error) {
+      console.error("[ADMIN] Error starting auto-test:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Internal server error",
+      });
+    }
+  }
+);
+
+// POST /api/admin/autotest/stop - Stop auto-testing
+app.post(
+  "/api/admin/autotest/stop",
+  adminAuth,
+  (req: Request, res: Response) => {
+    try {
+      stopAutoTest();
+      console.log(
+        `[ADMIN] Auto-testing stopped by ${req.socket.remoteAddress}`
+      );
+
+      res.json({
+        success: true,
+        message: "Auto-testing stopped",
+      });
+    } catch (error) {
+      console.error("[ADMIN] Error stopping auto-test:", error);
+      res.status(500).json({ success: false, error: "Internal server error" });
+    }
+  }
+);
+
+// GET /api/admin/autotest/status - Get auto-test status
+app.get(
+  "/api/admin/autotest/status",
+  adminAuth,
+  (req: Request, res: Response) => {
+    try {
+      const config = getAutoTestConfig();
+      const enabled = isAutoTestEnabled();
+
+      res.json({
+        success: true,
+        enabled,
+        config,
+      });
+    } catch (error) {
+      console.error("[ADMIN] Error getting auto-test status:", error);
+      res.status(500).json({ success: false, error: "Internal server error" });
+    }
+  }
+);
 
 // Start server
 httpServer.listen(PORT, "0.0.0.0", () => {

@@ -18,10 +18,17 @@ interface Ban {
 const router = useRouter();
 const reports = ref<Report[]>([]);
 const bans = ref<Ban[]>([]);
-const activeTab = ref<"reports" | "bans">("reports");
+const activeTab = ref<"reports" | "bans" | "autotest">("reports");
 const isLoading = ref(false);
 const searchQuery = ref("");
 const selectedPlayer = ref<string | null>(null);
+
+// Auto-test state
+const autoTestEnabled = ref(false);
+const autoTestPlayerNames = ref("");
+const autoTestInterval = ref(10);
+const autoTestRandomness = ref(50);
+const autoTestStatus = ref<string>("");
 
 const getToken = () => localStorage.getItem("shadow_ops_token");
 
@@ -162,12 +169,97 @@ const logout = () => {
   router.push("/");
 };
 
+const fetchAutoTestStatus = async () => {
+  try {
+    const res = await fetch(`${config.apiBaseUrl}/api/admin/autotest/status`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    const data = await res.json();
+    if (data.success) {
+      autoTestEnabled.value = data.enabled;
+      if (data.config.playerNames && data.config.playerNames.length > 0) {
+        autoTestPlayerNames.value = data.config.playerNames.join("\n");
+      }
+      autoTestInterval.value = data.config.baseIntervalSeconds;
+      autoTestRandomness.value = data.config.randomnessPercent;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+const startAutoTest = async () => {
+  if (!autoTestPlayerNames.value.trim()) {
+    alert("Please enter at least one player name");
+    return;
+  }
+
+  const playerNames = autoTestPlayerNames.value
+    .split("\n")
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0);
+
+  if (playerNames.length === 0) {
+    alert("Please enter at least one valid player name");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${config.apiBaseUrl}/api/admin/autotest/start`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        playerNames,
+        baseIntervalSeconds: autoTestInterval.value,
+        randomnessPercent: autoTestRandomness.value,
+      }),
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      autoTestStatus.value = "Auto-testing started successfully";
+      await fetchAutoTestStatus();
+    } else {
+      autoTestStatus.value = `Error: ${data.error}`;
+    }
+  } catch (e) {
+    console.error(e);
+    autoTestStatus.value = "Error starting auto-test";
+  }
+};
+
+const stopAutoTest = async () => {
+  try {
+    const res = await fetch(`${config.apiBaseUrl}/api/admin/autotest/stop`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+      },
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      autoTestStatus.value = "Auto-testing stopped";
+      await fetchAutoTestStatus();
+    } else {
+      autoTestStatus.value = `Error: ${data.error}`;
+    }
+  } catch (e) {
+    console.error(e);
+    autoTestStatus.value = "Error stopping auto-test";
+  }
+};
+
 onMounted(() => {
   if (!getToken()) {
     router.push("/");
     return;
   }
   fetchReports();
+  fetchAutoTestStatus();
 });
 </script>
 
@@ -221,6 +313,20 @@ onMounted(() => {
         "
       >
         ACTIVE CONTAINMENT (BANS)
+      </button>
+      <button
+        @click="
+          activeTab = 'autotest';
+          fetchAutoTestStatus();
+        "
+        class="px-4 py-2 text-sm border transition-colors"
+        :class="
+          activeTab === 'autotest'
+            ? 'border-blue-500 bg-blue-900/20 text-blue-300'
+            : 'border-blue-900/30 text-blue-500/50 hover:text-blue-400'
+        "
+      >
+        AUTO-TEST SYSTEM
       </button>
     </div>
 
@@ -355,6 +461,130 @@ onMounted(() => {
           >
             REVOKE
           </button>
+        </div>
+      </div>
+
+      <!-- Auto-Test Control -->
+      <div v-if="activeTab === 'autotest'" class="space-y-6">
+        <div class="border border-blue-900/30 bg-blue-900/10 p-4">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-blue-300 font-bold text-lg">
+                AUTO-TEST SYSTEM STATUS
+              </h3>
+              <div class="text-xs text-blue-500/50 mt-1">
+                Automatically generate test reports for QA purposes
+              </div>
+            </div>
+            <div
+              class="px-4 py-2 text-sm font-bold"
+              :class="
+                autoTestEnabled
+                  ? 'text-green-400 border border-green-500/30 bg-green-900/20'
+                  : 'text-red-400 border border-red-500/30 bg-red-900/20'
+              "
+            >
+              {{ autoTestEnabled ? "ACTIVE" : "INACTIVE" }}
+            </div>
+          </div>
+
+          <div
+            v-if="autoTestStatus"
+            class="mb-4 p-2 border border-blue-500/30 bg-blue-900/20 text-blue-300 text-sm"
+          >
+            {{ autoTestStatus }}
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Player Names -->
+          <div>
+            <label class="block text-blue-400 text-sm mb-2"
+              >PLAYER NAMES (one per line):</label
+            >
+            <textarea
+              v-model="autoTestPlayerNames"
+              placeholder="PlayerOne&#10;PlayerTwo&#10;PlayerThree&#10;..."
+              class="w-full h-64 bg-black border border-blue-900 text-blue-400 px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors text-sm font-mono resize-y"
+              :disabled="autoTestEnabled"
+            ></textarea>
+            <div class="text-xs text-blue-500/50 mt-1">
+              Enter a list of player names to use for testing. Each name on a
+              new line.
+            </div>
+          </div>
+
+          <!-- Configuration -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-blue-400 text-sm mb-2"
+                >BASE INTERVAL (seconds):</label
+              >
+              <input
+                v-model.number="autoTestInterval"
+                type="number"
+                min="1"
+                max="3600"
+                class="w-full bg-black border border-blue-900 text-blue-400 px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors text-sm font-mono"
+                :disabled="autoTestEnabled"
+              />
+              <div class="text-xs text-blue-500/50 mt-1">
+                Base time between reports (in seconds)
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-blue-400 text-sm mb-2"
+                >RANDOMNESS (%):</label
+              >
+              <input
+                v-model.number="autoTestRandomness"
+                type="number"
+                min="0"
+                max="100"
+                class="w-full bg-black border border-blue-900 text-blue-400 px-4 py-2 focus:outline-none focus:border-blue-500 transition-colors text-sm font-mono"
+                :disabled="autoTestEnabled"
+              />
+              <div class="text-xs text-blue-500/50 mt-1">
+                Example: 50% of 10s = 5-15 seconds
+              </div>
+            </div>
+          </div>
+
+          <!-- Control Buttons -->
+          <div class="flex gap-4">
+            <button
+              v-if="!autoTestEnabled"
+              @click="startAutoTest"
+              class="flex-1 px-6 py-3 text-sm border border-green-500 text-green-400 hover:bg-green-900/20 transition-colors font-bold"
+            >
+              START AUTO-TEST
+            </button>
+            <button
+              v-else
+              @click="stopAutoTest"
+              class="flex-1 px-6 py-3 text-sm border border-red-500 text-red-400 hover:bg-red-900/20 transition-colors font-bold"
+            >
+              STOP AUTO-TEST
+            </button>
+            <button
+              @click="fetchAutoTestStatus"
+              class="px-6 py-3 text-sm border border-blue-500 text-blue-400 hover:bg-blue-900/20 transition-colors"
+            >
+              REFRESH STATUS
+            </button>
+          </div>
+
+          <!-- Warning -->
+          <div class="border border-yellow-500/30 bg-yellow-900/10 p-4">
+            <div class="text-yellow-400 font-bold text-sm mb-2">⚠️ WARNING</div>
+            <div class="text-yellow-500/80 text-xs space-y-1">
+              <p>• Auto-testing will generate fake reports continuously</p>
+              <p>• All generated reports are marked with [TEST] prefix</p>
+              <p>• This feature is for QA and development purposes only</p>
+              <p>• Remember to stop auto-testing when done</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
