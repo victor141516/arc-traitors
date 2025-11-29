@@ -105,6 +105,12 @@ const openHelp = () => {
         ARC Traitors Database // Unauthorized Access Prohibited // Community
         Driven Intelligence
       </p>
+      <a
+        href="/disclaimer.html"
+        class="text-red-900 hover:text-red-900/40 transition-colors mt-2 block font-mono uppercase tracking-widest no-underline"
+      >
+        Disclaimer
+      </a>
     </footer>
 
     <!-- Help Modal -->
