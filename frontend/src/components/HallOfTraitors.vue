@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { config } from "../config";
+import img1st from "../assets/1st.png";
+import img2nd from "../assets/2nd.png";
+import img3rd from "../assets/3rd.png";
 
 interface LeaderboardEntry {
   playerName: string;
@@ -89,7 +92,7 @@ onMounted(() => {
 
     <div
       v-else
-      class="overflow-y-auto pr-2 space-y-4 custom-scrollbar flex-grow pb-8"
+      class="overflow-y-auto px-12 pt-32 space-y-4 custom-scrollbar flex-grow pb-8"
     >
       <!-- Top 3 Special Display -->
       <div class="grid grid-cols-1 gap-4 mb-8">
@@ -99,13 +102,13 @@ onMounted(() => {
           :to="`/player/${leaderboard[0].playerName}`"
           class="relative bg-gradient-to-b from-yellow-900/20 to-black border border-yellow-600 p-6 text-center transform hover:scale-[1.02] transition-transform duration-300 cursor-pointer block"
         >
+          <img
+            :src="img1st"
+            class="absolute -top-24 left-1/2 -translate-x-1/2 w-48 filter drop-shadow-[0_0_15px_rgba(234,179,8,0.6)]"
+            alt="Rank 1"
+          />
           <div
-            class="absolute -top-6 left-1/2 -translate-x-1/2 text-6xl filter drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]"
-          >
-            👑
-          </div>
-          <div
-            class="mt-6 mb-2 text-yellow-500 font-mono text-xs tracking-[0.2em]"
+            class="mt-20 mb-2 text-yellow-500 font-mono text-xs tracking-[0.2em]"
           >
             MOST WANTED
           </div>
@@ -131,11 +134,13 @@ onMounted(() => {
           <router-link
             v-if="leaderboard[1]"
             :to="`/player/${leaderboard[1].playerName}`"
-            class="relative bg-gradient-to-b from-gray-800/20 to-black border border-gray-400 p-4 text-center cursor-pointer block"
+            class="relative bg-gradient-to-b from-gray-800/20 to-black border border-gray-400 p-4 pl-36 text-center cursor-pointer block overflow-visible"
           >
-            <div class="absolute -top-4 left-1/2 -translate-x-1/2 text-4xl">
-              🥈
-            </div>
+            <img
+              :src="img2nd"
+              class="absolute -left-10 -top-12 w-40 max-w-none filter drop-shadow-[0_0_10px_rgba(56,189,248,0.4)]"
+              alt="Rank 2"
+            />
             <div
               class="mt-4 mb-1 text-gray-400 font-mono text-[10px] tracking-[0.2em]"
             >
@@ -161,11 +166,13 @@ onMounted(() => {
           <router-link
             v-if="leaderboard[2]"
             :to="`/player/${leaderboard[2].playerName}`"
-            class="relative bg-gradient-to-b from-orange-900/20 to-black border border-orange-700 p-4 text-center cursor-pointer block"
+            class="relative bg-gradient-to-b from-orange-900/20 to-black border border-orange-700 p-4 pl-28 text-center cursor-pointer block overflow-visible"
           >
-            <div class="absolute -top-4 left-1/2 -translate-x-1/2 text-4xl">
-              🥉
-            </div>
+            <img
+              :src="img3rd"
+              class="absolute -left-8 -top-10 w-32 max-w-none filter drop-shadow-[0_0_10px_rgba(249,115,22,0.4)]"
+              alt="Rank 3"
+            />
             <div
               class="mt-4 mb-1 text-orange-500 font-mono text-[10px] tracking-[0.2em]"
             >
