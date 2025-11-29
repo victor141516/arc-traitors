@@ -28,6 +28,11 @@ import {
   isAutoTestEnabled,
   setSocketIo,
 } from "./autotest";
+import {
+  isLoginBlocked,
+  recordFailedLogin,
+  resetLoginAttempts,
+} from "./loginRateLimit";
 import { getCorsOrigins, getPort, getDatabasePath } from "./config";
 
 // CORS Configuration from validated environment variables
@@ -349,14 +354,53 @@ app.get("/health", (req: Request, res: Response) => {
 // POST /api/admin/login - Verify admin key
 app.post("/api/admin/login", (req: Request, res: Response) => {
   const { key } = req.body;
-  const ip = req.socket.remoteAddress;
+  const ip = (req.headers["x-forwarded-for"] ||
+    req.socket.remoteAddress ||
+    "unknown") as string;
+
+  // Check if IP is blocked
+  const blockStatus = isLoginBlocked(ip);
+  if (blockStatus.blocked) {
+    console.log(
+      `[LOGIN_RATE_LIMIT] Blocked login attempt from ${ip}, ${blockStatus.remainingTime}s remaining`
+    );
+    return res.status(429).json({
+      success: false,
+      error: `Too many failed login attempts. Please try again in ${blockStatus.remainingTime} seconds.`,
+      remainingTime: blockStatus.remainingTime,
+    });
+  }
 
   if (verifyAdmin(key)) {
+    // Successful login - reset attempts
+    resetLoginAttempts(ip);
     console.log(`[ADMIN] Successful admin login from ${ip}`);
     res.json({ success: true, token: key });
   } else {
-    console.log(`[ADMIN] Failed admin login attempt from ${ip}`);
-    res.status(401).json({ success: false, error: "Invalid credentials" });
+    // Failed login - record attempt
+    const result = recordFailedLogin(ip);
+    console.log(
+      `[ADMIN] Failed admin login attempt from ${ip} (${
+        result.attemptsLeft !== undefined
+          ? `${result.attemptsLeft} attempts left`
+          : "blocked"
+      })`
+    );
+
+    if (result.shouldBlock) {
+      return res.status(429).json({
+        success: false,
+        error: `Too many failed login attempts. Your IP has been temporarily blocked for ${result.blockTime} seconds.`,
+        blocked: true,
+        blockTime: result.blockTime,
+      });
+    }
+
+    res.status(401).json({
+      success: false,
+      error: "Invalid credentials",
+      attemptsLeft: result.attemptsLeft,
+    });
   }
 });
 

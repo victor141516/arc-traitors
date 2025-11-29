@@ -5,6 +5,8 @@ import { config } from "../config";
 
 const key = ref("");
 const error = ref("");
+const attemptsLeft = ref<number | null>(null);
+const blockInfo = ref<{ blocked: boolean; time: number } | null>(null);
 const isLoading = ref(false);
 const router = useRouter();
 
@@ -13,6 +15,8 @@ const login = async () => {
 
   isLoading.value = true;
   error.value = "";
+  attemptsLeft.value = null;
+  blockInfo.value = null;
 
   try {
     const response = await fetch(`${config.apiBaseUrl}/api/admin/login`, {
@@ -29,7 +33,24 @@ const login = async () => {
       localStorage.setItem("shadow_ops_token", data.token);
       router.push("/console");
     } else {
-      error.value = "ACCESS DENIED";
+      // Check if it's a rate limit error
+      if (response.status === 429) {
+        if (data.blocked) {
+          // Just got blocked
+          blockInfo.value = { blocked: true, time: data.blockTime };
+          error.value = `SECURITY LOCKOUT - ${data.blockTime}s`;
+        } else if (data.remainingTime) {
+          // Already blocked from previous attempts
+          blockInfo.value = { blocked: true, time: data.remainingTime };
+          error.value = `LOCKED - ${data.remainingTime}s remaining`;
+        }
+      } else {
+        // Regular auth failure
+        error.value = "ACCESS DENIED";
+        if (data.attemptsLeft !== undefined) {
+          attemptsLeft.value = data.attemptsLeft;
+        }
+      }
     }
   } catch (err) {
     error.value = "SYSTEM FAILURE";
@@ -76,19 +97,41 @@ const login = async () => {
             />
           </div>
 
-          <div
-            v-if="error"
-            class="text-red-500 text-xs text-center animate-pulse"
-          >
-            >> {{ error }} <<
+          <div v-if="error" class="space-y-2">
+            <div class="text-red-500 text-xs text-center animate-pulse">
+              >> {{ error }} <<
+            </div>
+            <div
+              v-if="attemptsLeft !== null"
+              class="text-yellow-500 text-xs text-center"
+            >
+              ⚠️ {{ attemptsLeft }} attempt{{
+                attemptsLeft !== 1 ? "s" : ""
+              }}
+              remaining
+            </div>
+            <div
+              v-if="blockInfo?.blocked"
+              class="text-red-400 text-xs text-center border border-red-500/30 bg-red-900/20 p-2"
+            >
+              🔒 TEMPORARY LOCKOUT<br />
+              Your IP has been blocked due to multiple failed attempts.<br />
+              Wait {{ blockInfo.time }} seconds before trying again.
+            </div>
           </div>
 
           <button
             type="submit"
-            :disabled="isLoading"
-            class="w-full bg-blue-900/20 border border-blue-500/50 text-blue-400 py-3 hover:bg-blue-900/40 hover:text-blue-300 transition-all duration-300 text-sm tracking-widest uppercase"
+            :disabled="isLoading || blockInfo?.blocked"
+            class="w-full bg-blue-900/20 border border-blue-500/50 text-blue-400 py-3 hover:bg-blue-900/40 hover:text-blue-300 transition-all duration-300 text-sm tracking-widest uppercase disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {{ isLoading ? "AUTHENTICATING..." : "INITIATE HANDSHAKE" }}
+            {{
+              blockInfo?.blocked
+                ? "SYSTEM LOCKED"
+                : isLoading
+                ? "AUTHENTICATING..."
+                : "INITIATE HANDSHAKE"
+            }}
           </button>
         </form>
       </div>
