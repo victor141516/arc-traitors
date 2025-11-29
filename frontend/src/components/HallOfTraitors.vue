@@ -122,11 +122,6 @@ onMounted(() => {
             {{ leaderboard[0].votes }}
             <span class="text-xs text-red-500/50">REPORTS</span>
           </div>
-          <div
-            class="absolute top-2 right-2 text-yellow-500/20 font-black text-6xl select-none pointer-events-none"
-          >
-            #1
-          </div>
         </router-link>
 
         <div class="grid grid-cols-2 gap-4">
@@ -155,11 +150,6 @@ onMounted(() => {
               {{ leaderboard[1].votes }}
               <span class="text-[10px] text-red-400/50">REPORTS</span>
             </div>
-            <div
-              class="absolute top-2 right-2 text-gray-500/20 font-black text-4xl select-none pointer-events-none"
-            >
-              #2
-            </div>
           </router-link>
 
           <!-- #3 -->
@@ -186,11 +176,6 @@ onMounted(() => {
             <div class="text-lg font-mono text-red-400 font-bold">
               {{ leaderboard[2].votes }}
               <span class="text-[10px] text-red-400/50">REPORTS</span>
-            </div>
-            <div
-              class="absolute top-2 right-2 text-orange-500/20 font-black text-4xl select-none pointer-events-none"
-            >
-              #3
             </div>
           </router-link>
         </div>
