@@ -16,33 +16,8 @@ const handleVoteSuccess = () => {
 
 <template>
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-    <!-- Left Column: Report & Search (Action Area) -->
-    <div class="lg:col-span-4 flex flex-col gap-8">
-      <div class="traitor-panel">
-        <h2
-          class="text-red-500 font-bold mb-4 flex items-center gap-2 text-sm tracking-widest border-b border-red-900/30 pb-2"
-        >
-          <span class="text-lg">📝</span> REPORT INCIDENT
-        </h2>
-        <p class="text-gray-400 text-xs mb-6 font-mono leading-relaxed">
-          If you have been a victim of treason, report it immediately. Your
-          information helps keep the community safe.
-        </p>
-        <VoteForm @vote-success="handleVoteSuccess" />
-      </div>
-
-      <div class="traitor-panel">
-        <h2
-          class="text-red-500 font-bold mb-4 flex items-center gap-2 text-sm tracking-widest border-b border-red-900/30 pb-2"
-        >
-          <span class="text-lg">🔍</span> SEARCH RECORDS
-        </h2>
-        <PlayerSearch />
-      </div>
-    </div>
-
-    <!-- Right Column: The Blacklist (Data Display) -->
-    <div class="lg:col-span-8">
+    <!-- Recent Activity - First on mobile, right side on desktop -->
+    <div class="lg:col-span-8 lg:order-2">
       <div class="traitor-panel h-full min-h-[600px]">
         <div
           class="flex justify-between items-end mb-6 border-b border-red-900/30 pb-4"
@@ -64,6 +39,31 @@ const handleVoteSuccess = () => {
         </div>
 
         <RecentReports ref="recentReportsRef" />
+      </div>
+    </div>
+
+    <!-- Action Column: Report & Search - Second on mobile, left side on desktop -->
+    <div class="lg:col-span-4 lg:order-1 flex flex-col gap-8">
+      <div class="traitor-panel">
+        <h2
+          class="text-red-500 font-bold mb-4 flex items-center gap-2 text-sm tracking-widest border-b border-red-900/30 pb-2"
+        >
+          <span class="text-lg">📝</span> REPORT INCIDENT
+        </h2>
+        <p class="text-gray-400 text-xs mb-6 font-mono leading-relaxed">
+          If you have been a victim of treason, report it immediately. Your
+          information helps keep the community safe.
+        </p>
+        <VoteForm @vote-success="handleVoteSuccess" />
+      </div>
+
+      <div class="traitor-panel">
+        <h2
+          class="text-red-500 font-bold mb-4 flex items-center gap-2 text-sm tracking-widest border-b border-red-900/30 pb-2"
+        >
+          <span class="text-lg">🔍</span> SEARCH RECORDS
+        </h2>
+        <PlayerSearch />
       </div>
     </div>
   </div>
