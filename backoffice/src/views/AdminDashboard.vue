@@ -23,6 +23,14 @@ const isLoading = ref(false);
 const searchQuery = ref("");
 const selectedPlayer = ref<string | null>(null);
 
+const formatDate = (dateString: string) => {
+  let isoString = dateString;
+  if (!isoString.endsWith("Z") && !isoString.includes("+")) {
+    isoString += "Z";
+  }
+  return new Date(isoString).toLocaleString();
+};
+
 // Auto-test state
 const autoTestEnabled = ref(false);
 const autoTestPlayerNames = ref("");
@@ -407,7 +415,7 @@ onMounted(() => {
           class="border border-blue-900/20 p-3 hover:bg-blue-900/10 transition-colors flex gap-4 items-start"
         >
           <div class="text-xs text-blue-500/50 w-32 shrink-0">
-            {{ new Date(report.voted_at).toLocaleString() }}
+            {{ formatDate(report.voted_at) }}
           </div>
           <div class="flex-grow">
             <button

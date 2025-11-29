@@ -67,7 +67,13 @@ const goBack = () => {
 };
 
 const formatTime = (dateString: string) => {
-  const date = new Date(dateString);
+  // Ensure dateString ends with Z if it doesn't have timezone info
+  // This helps browsers interpret it as UTC
+  let isoString = dateString;
+  if (!isoString.endsWith("Z") && !isoString.includes("+")) {
+    isoString += "Z";
+  }
+  const date = new Date(isoString);
   return date.toLocaleString([], {
     year: "numeric",
     month: "2-digit",

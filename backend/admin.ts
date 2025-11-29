@@ -13,7 +13,7 @@ export function verifyAdmin(token: string): boolean {
  */
 export function getAdminReports(limit: number = 100, offset: number = 0) {
   const stmt = db.prepare(`
-    SELECT id, player_name, message, voted_at, player_name_normalized
+    SELECT id, player_name, message, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
     FROM votes
     ORDER BY voted_at DESC
     LIMIT ? OFFSET ?
@@ -57,7 +57,7 @@ export function deletePlayerReports(playerName: string) {
  */
 export function searchAdminReports(query: string) {
   const stmt = db.prepare(`
-    SELECT id, player_name, message, voted_at, player_name_normalized
+    SELECT id, player_name, message, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
     FROM votes
     WHERE player_name LIKE ? OR message LIKE ?
     ORDER BY voted_at DESC

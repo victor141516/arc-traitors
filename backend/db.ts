@@ -166,7 +166,7 @@ export function getLeaderboard(): LeaderboardEntry[] {
  */
 export function getRecentReports(limit: number = 50): RecentReport[] {
   const stmt = db.prepare(`
-    SELECT id, player_name, message, voted_at
+    SELECT id, player_name, message, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at
     FROM votes
     ORDER BY voted_at DESC
     LIMIT ?
@@ -228,7 +228,7 @@ export function getPlayerDetails(playerName: string): PlayerDetails | null {
 
   // Get reports history
   const reportsStmt = db.prepare(`
-    SELECT id, player_name, message, voted_at
+    SELECT id, player_name, message, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at
     FROM votes
     WHERE player_name = ?
     ORDER BY voted_at DESC

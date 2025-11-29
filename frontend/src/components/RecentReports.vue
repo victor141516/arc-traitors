@@ -92,7 +92,13 @@ onUnmounted(() => {
 });
 
 const formatTime = (dateString: string) => {
-  const date = new Date(dateString);
+  // Ensure dateString ends with Z if it doesn't have timezone info
+  // This helps browsers interpret it as UTC
+  let isoString = dateString;
+  if (!isoString.endsWith("Z") && !isoString.includes("+")) {
+    isoString += "Z";
+  }
+  const date = new Date(isoString);
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 </script>
