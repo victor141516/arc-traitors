@@ -1,5 +1,12 @@
 <script setup lang="ts">
-// App.vue is now just a layout wrapper
+import { ref } from "vue";
+import HelpModal from "./components/HelpModal.vue";
+
+const helpModalRef = ref<InstanceType<typeof HelpModal> | null>(null);
+
+const openHelp = () => {
+  helpModalRef.value?.open();
+};
 </script>
 
 <template>
@@ -43,7 +50,7 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-6">
+        <div class="flex items-center gap-4">
           <router-link
             to="/hall-of-traitors"
             class="group flex items-center gap-2 px-4 py-2 bg-yellow-900/20 border-2 border-yellow-600 hover:bg-yellow-900/30 hover:border-yellow-500 transition-all duration-300 transform hover:scale-105"
@@ -62,6 +69,14 @@
               </span>
             </div>
           </router-link>
+
+          <button
+            @click="openHelp"
+            class="flex items-center justify-center w-10 h-10 bg-red-900/20 border border-red-600 hover:bg-red-900/30 hover:border-red-500 transition-all transform hover:scale-110 text-red-500 font-bold text-lg"
+            title="Help"
+          >
+            ?
+          </button>
 
           <div
             class="hidden md:flex items-center gap-2 text-xs font-mono text-red-500/50"
@@ -91,6 +106,9 @@
         Driven Intelligence
       </p>
     </footer>
+
+    <!-- Help Modal -->
+    <HelpModal ref="helpModalRef" />
   </div>
 </template>
 
