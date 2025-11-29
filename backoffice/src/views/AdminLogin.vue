@@ -24,7 +24,7 @@ const login = async () => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ key: key.value }),
+      body: JSON.stringify({ password: key.value }),
     });
 
     const data = await response.json();
@@ -105,9 +105,7 @@ const login = async () => {
               v-if="attemptsLeft !== null"
               class="text-yellow-500 text-xs text-center"
             >
-              ⚠️ {{ attemptsLeft }} attempt{{
-                attemptsLeft !== 1 ? "s" : ""
-              }}
+              ⚠️ {{ attemptsLeft }} attempt{{ attemptsLeft !== 1 ? "s" : "" }}
               remaining
             </div>
             <div

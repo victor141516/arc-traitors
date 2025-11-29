@@ -1,11 +1,11 @@
 import db from "./db";
-import { getAdminPassword } from "./config";
+import { verifyToken } from "./jwtAuth";
 
 /**
- * Verify admin credentials
+ * Verify admin JWT token
  */
-export function verifyAdmin(key: string): boolean {
-  return key === getAdminPassword();
+export function verifyAdmin(token: string): boolean {
+  return verifyToken(token);
 }
 
 /**

@@ -7,6 +7,16 @@ const EnvSchema = z.object({
     .string()
     .min(8, "Admin password must be at least 8 characters long"),
 
+  // JWT Secret for token generation (optional, auto-generated if not provided)
+  JWT_SECRET: z
+    .string()
+    .optional()
+    .default(() => {
+      // Generate a random secret if not provided
+      const crypto = require("crypto");
+      return crypto.randomBytes(64).toString("hex");
+    }),
+
   // CORS configuration (optional)
   CORS_ORIGINS: z.string().optional(),
 
@@ -45,6 +55,7 @@ function validateEnv() {
           `Required variables:\n` +
           `- ADMIN_PASSWORD: Admin password (min 8 chars, must include uppercase, lowercase, number, and special character)\n` +
           `Optional variables:\n` +
+          `- JWT_SECRET: Secret key for JWT token generation (auto-generated if not provided)\n` +
           `- CORS_ORIGINS: Comma-separated list of allowed CORS origins\n` +
           `- PORT: Server port (default: 33000)\n` +
           `- DATABASE_PATH: SQLite database file path (default: votes.db)\n` +
@@ -69,5 +80,6 @@ export const getCorsOrigins = () =>
     : null;
 export const getPort = () => config.PORT;
 export const getDatabasePath = () => config.DATABASE_PATH;
+export const getJwtSecret = () => config.JWT_SECRET;
 export const isProduction = () => config.NODE_ENV === "production";
 export const isDevelopment = () => config.NODE_ENV === "development";

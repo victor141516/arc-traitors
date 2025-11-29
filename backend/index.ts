@@ -33,6 +33,7 @@ import {
   recordFailedLogin,
   resetLoginAttempts,
 } from "./loginRateLimit";
+import { verifyPasswordAndGenerateToken } from "./jwtAuth";
 import { getCorsOrigins, getPort, getDatabasePath } from "./config";
 
 // CORS Configuration from validated environment variables
@@ -351,9 +352,9 @@ app.get("/health", (req: Request, res: Response) => {
 
 // --- ADMIN ROUTES ---
 
-// POST /api/admin/login - Verify admin key
+// POST /api/admin/login - Verify admin password and generate JWT token
 app.post("/api/admin/login", (req: Request, res: Response) => {
-  const { key } = req.body;
+  const { password } = req.body;
   const ip = (req.headers["x-forwarded-for"] ||
     req.socket.remoteAddress ||
     "unknown") as string;
@@ -371,11 +372,14 @@ app.post("/api/admin/login", (req: Request, res: Response) => {
     });
   }
 
-  if (verifyAdmin(key)) {
+  // Verify password and generate JWT token
+  const token = verifyPasswordAndGenerateToken(password);
+
+  if (token) {
     // Successful login - reset attempts
     resetLoginAttempts(ip);
     console.log(`[ADMIN] Successful admin login from ${ip}`);
-    res.json({ success: true, token: key });
+    res.json({ success: true, token });
   } else {
     // Failed login - record attempt
     const result = recordFailedLogin(ip);

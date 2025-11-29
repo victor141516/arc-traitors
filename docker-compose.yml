@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: arc-traitors-backend
     environment:
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      # - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - DATABASE_PATH=/data/votes.db
     volumes:
       - ./data:/data

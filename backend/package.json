@@ -6,7 +6,8 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/cors": "^2.8.19",
-    "@types/express": "5.0.5"
+    "@types/express": "5.0.5",
+    "@types/jsonwebtoken": "^9.0.7"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -14,6 +15,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "socket.io": "^4.8.1",
     "zod": "^4.1.13"
   }
