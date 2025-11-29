@@ -50,10 +50,10 @@ defineExpose({
 
           <!-- Image placeholder - full width at top -->
           <div
-            class="w-full h-48 bg-gradient-to-b from-red-900/20 to-black border-b-2 border-red-900/30 flex items-center justify-center"
+            class="w-full bg-gradient-to-b from-red-900/20 to-black border-b-2 border-red-900/30 flex items-center justify-center"
           >
             <!-- Placeholder for future image -->
-            <div class="text-red-900/30 text-6xl">🚨</div>
+            <img src="../assets/help-header.jpg" />
           </div>
 
           <!-- Modal content -->
