@@ -5,17 +5,7 @@ const EnvSchema = z.object({
   // Admin configuration
   ADMIN_PASSWORD: z
     .string()
-    .min(8, "Admin password must be at least 8 characters long")
-    .refine(
-      (value) =>
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(
-          value
-        ),
-      {
-        message:
-          "Admin password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
-      }
-    ),
+    .min(8, "Admin password must be at least 8 characters long"),
 
   // CORS configuration (optional)
   CORS_ORIGINS: z.string().optional(),
