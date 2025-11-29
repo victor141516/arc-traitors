@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { io, Socket } from "socket.io-client";
 import { config } from "../config";
 
@@ -12,7 +12,19 @@ interface RecentReport {
 const reports = ref<RecentReport[]>([]);
 const isLoading = ref(false);
 const error = ref("");
+const isMobile = ref(window.innerWidth < 1024); // lg breakpoint
 let socket: Socket | null = null;
+
+const displayedReports = computed(() => {
+  if (isMobile.value) {
+    return reports.value.slice(0, 5);
+  }
+  return reports.value;
+});
+
+const updateIsMobile = () => {
+  isMobile.value = window.innerWidth < 1024;
+};
 
 const fetchRecentReports = async () => {
   isLoading.value = true;
@@ -69,12 +81,14 @@ defineExpose({
 onMounted(() => {
   fetchRecentReports();
   setupSocket();
+  window.addEventListener("resize", updateIsMobile);
 });
 
 onUnmounted(() => {
   if (socket) {
     socket.disconnect();
   }
+  window.removeEventListener("resize", updateIsMobile);
 });
 
 const formatTime = (dateString: string) => {
@@ -138,7 +152,7 @@ const formatTime = (dateString: string) => {
     >
       <transition-group name="list">
         <div
-          v-for="report in reports"
+          v-for="report in displayedReports"
           :key="report.id"
           class="group flex items-center gap-4 p-3 border-b border-red-900/10 hover:bg-red-900/10 transition-colors cursor-default"
         >

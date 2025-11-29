@@ -90,12 +90,9 @@ onMounted(() => {
       <p class="text-yellow-500/50 font-mono text-xs">NO DATA FOUND.</p>
     </div>
 
-    <div
-      v-else
-      class="overflow-y-auto px-12 pt-32 space-y-4 custom-scrollbar flex-grow pb-8"
-    >
+    <div v-else class="px-4 pt-32 space-y-4 custom-scrollbar flex-grow pb-8">
       <!-- Top 3 Special Display -->
-      <div class="grid grid-cols-1 gap-4 mb-8">
+      <div class="grid grid-cols-1 gap-12 mb-8">
         <!-- #1 The Traitor King/Queen -->
         <router-link
           v-if="leaderboard[0]"
@@ -124,12 +121,22 @@ onMounted(() => {
           </div>
         </router-link>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div
+          class="grid grid-cols-1 gap-12"
+          :class="{
+            'md:grid-cols-2 md:gap-4':
+              (!leaderboard[1] || leaderboard[1].playerName.length < 13) &&
+              (!leaderboard[2] || leaderboard[2].playerName.length < 13),
+            'lg:grid-cols-2 lg:gap-12':
+              (leaderboard[1] && leaderboard[1].playerName.length >= 13) ||
+              (leaderboard[2] && leaderboard[2].playerName.length >= 13),
+          }"
+        >
           <!-- #2 -->
           <router-link
             v-if="leaderboard[1]"
             :to="`/player/${leaderboard[1].playerName}`"
-            class="relative bg-gradient-to-b from-gray-800/20 to-black border border-gray-400 p-4 pl-36 text-center cursor-pointer block overflow-visible"
+            class="relative bg-gradient-to-b from-gray-800/20 to-black border border-gray-400 p-4 pl-24 lg:pl-36 text-center cursor-pointer block overflow-visible"
           >
             <img
               :src="img2nd"
@@ -156,11 +163,11 @@ onMounted(() => {
           <router-link
             v-if="leaderboard[2]"
             :to="`/player/${leaderboard[2].playerName}`"
-            class="relative bg-gradient-to-b from-orange-900/20 to-black border border-orange-700 p-4 pl-28 text-center cursor-pointer block overflow-visible"
+            class="relative bg-gradient-to-b from-orange-900/20 to-black border border-orange-700 p-4 pl-18 lg:pl-28 text-center cursor-pointer block overflow-visible"
           >
             <img
               :src="img3rd"
-              class="absolute -left-8 -top-10 w-32 max-w-none filter drop-shadow-[0_0_10px_rgba(249,115,22,0.4)]"
+              class="absolute -left-8 -top-4 w-32 max-w-none filter drop-shadow-[0_0_10px_rgba(249,115,22,0.4)]"
               alt="Rank 3"
             />
             <div

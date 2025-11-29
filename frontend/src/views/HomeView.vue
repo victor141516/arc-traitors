@@ -18,7 +18,7 @@ const handleVoteSuccess = () => {
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
     <!-- Recent Activity - First on mobile, right side on desktop -->
     <div class="lg:col-span-8 lg:order-2">
-      <div class="traitor-panel h-full min-h-[600px]">
+      <div class="traitor-panel lg:h-full lg:min-h-[600px]">
         <div
           class="flex justify-between items-end mb-6 border-b border-red-900/30 pb-4"
         >
