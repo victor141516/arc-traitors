@@ -44,7 +44,7 @@ try {
     (col) => col.name === "player_name_normalized"
   );
   if (!hasNormalizedColumn) {
-    console.log("Migrating: Adding player_name_normalized column...");
+    console.log("[DB] Migrating: Adding player_name_normalized column...");
     db.run("ALTER TABLE votes ADD COLUMN player_name_normalized TEXT");
 
     // Backfill existing data
@@ -61,10 +61,10 @@ try {
         updateStmt.run(normalizeString(vote.player_name), vote.id);
       }
     })();
-    console.log("Migration: Normalized names backfilled.");
+    console.log("[DB] Migration: Normalized names backfilled.");
   }
 } catch (error) {
-  console.error("Error checking/adding columns:", error);
+  console.error("[DB] Error checking/adding columns:", error);
 }
 
 // Create index on player_name for better query performance
@@ -119,19 +119,24 @@ export function registerVote(
   playerName: string,
   message?: string
 ): { totalVotes: number } {
-  const normalizedName = normalizeString(playerName);
-  const stmt = db.prepare(
-    "INSERT INTO votes (player_name, player_name_normalized, message) VALUES (?, ?, ?)"
-  );
-  stmt.run(playerName, normalizedName, message || null);
+  try {
+    const normalizedName = normalizeString(playerName);
+    const stmt = db.prepare(
+      "INSERT INTO votes (player_name, player_name_normalized, message) VALUES (?, ?, ?)"
+    );
+    stmt.run(playerName, normalizedName, message || null);
 
-  // Get total votes for this player
-  const countStmt = db.prepare(
-    "SELECT COUNT(*) as count FROM votes WHERE player_name = ?"
-  );
-  const result = countStmt.get(playerName) as { count: number };
+    // Get total votes for this player
+    const countStmt = db.prepare(
+      "SELECT COUNT(*) as count FROM votes WHERE player_name = ?"
+    );
+    const result = countStmt.get(playerName) as { count: number };
 
-  return { totalVotes: result.count };
+    return { totalVotes: result.count };
+  } catch (error) {
+    console.error(`[DB] Error registering vote for "${playerName}":`, error);
+    throw error;
+  }
 }
 
 /**
@@ -271,13 +276,18 @@ export function isBanned(ip: string): boolean {
  * Ban an IP for a specific duration (in hours)
  */
 export function banIp(ip: string, durationHours: number) {
-  const bannedUntil = new Date();
-  bannedUntil.setHours(bannedUntil.getHours() + durationHours);
+  try {
+    const bannedUntil = new Date();
+    bannedUntil.setHours(bannedUntil.getHours() + durationHours);
 
-  const stmt = db.prepare(
-    "INSERT OR REPLACE INTO bans (ip, banned_until) VALUES (?, ?)"
-  );
-  stmt.run(ip, bannedUntil.toISOString());
+    const stmt = db.prepare(
+      "INSERT OR REPLACE INTO bans (ip, banned_until) VALUES (?, ?)"
+    );
+    stmt.run(ip, bannedUntil.toISOString());
+  } catch (error) {
+    console.error(`[DB] Error banning IP ${ip}:`, error);
+    throw error;
+  }
 }
 
 /**

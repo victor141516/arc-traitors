@@ -26,16 +26,30 @@ export function getAdminReports(limit: number = 100, offset: number = 0) {
  * Delete a specific report
  */
 export function deleteReport(id: number) {
-  const stmt = db.prepare("DELETE FROM votes WHERE id = ?");
-  return stmt.run(id);
+  try {
+    const stmt = db.prepare("DELETE FROM votes WHERE id = ?");
+    return stmt.run(id);
+  } catch (error) {
+    console.error(`[DB] Error deleting report ${id}:`, error);
+    throw error;
+  }
 }
 
 /**
  * Delete all reports for a specific player
  */
 export function deletePlayerReports(playerName: string) {
-  const stmt = db.prepare("DELETE FROM votes WHERE player_name = ?");
-  return stmt.run(playerName);
+  try {
+    const stmt = db.prepare("DELETE FROM votes WHERE player_name = ?");
+    const result = stmt.run(playerName);
+    return result;
+  } catch (error) {
+    console.error(
+      `[DB] Error deleting reports for player "${playerName}":`,
+      error
+    );
+    throw error;
+  }
 }
 
 /**
@@ -67,6 +81,11 @@ export function getBans() {
  * Revoke a ban
  */
 export function revokeBan(ip: string) {
-  const stmt = db.prepare("DELETE FROM bans WHERE ip = ?");
-  return stmt.run(ip);
+  try {
+    const stmt = db.prepare("DELETE FROM bans WHERE ip = ?");
+    return stmt.run(ip);
+  } catch (error) {
+    console.error(`[DB] Error revoking ban for IP ${ip}:`, error);
+    throw error;
+  }
 }

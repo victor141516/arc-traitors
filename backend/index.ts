@@ -21,7 +21,7 @@ import {
   getBans,
   revokeBan,
 } from "./admin";
-import { getCorsOrigins, getPort } from "./config";
+import { getCorsOrigins, getPort, getDatabasePath } from "./config";
 
 // CORS Configuration from validated environment variables
 const CORS_ORIGINS = getCorsOrigins();
@@ -63,11 +63,17 @@ if (CORS_ORIGINS) {
 const adminAuth = (req: Request, res: Response, next: Function) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    console.log(
+      `[AUTH] Unauthorized admin access attempt from ${req.socket.remoteAddress}`
+    );
     return res.status(401).json({ success: false, error: "Unauthorized" });
   }
 
   const token = authHeader.split(" ")[1];
   if (!token || !verifyAdmin(token)) {
+    console.log(
+      `[AUTH] Failed admin authentication from ${req.socket.remoteAddress}`
+    );
     return res.status(403).json({ success: false, error: "Forbidden" });
   }
 
@@ -96,6 +102,7 @@ const rateLimiter = (req: Request, res: Response, next: Function) => {
 
   // Check if IP is banned in DB
   if (isBanned(ip)) {
+    console.log(`[SECURITY] Banned IP attempted to vote: ${ip}`);
     return res.status(403).json({
       success: false,
       error:
@@ -120,6 +127,9 @@ const rateLimiter = (req: Request, res: Response, next: Function) => {
     const remainingTime = Math.ceil(
       (RATE_LIMIT_WINDOW - (now - record.lastRequest)) / 1000
     );
+    console.log(
+      `[RATE_LIMIT] IP ${ip} hit rate limit, ${remainingTime}s remaining`
+    );
     return res.status(429).json({
       success: false,
       error: `Please wait ${remainingTime} seconds before voting again.`,
@@ -137,6 +147,9 @@ const rateLimiter = (req: Request, res: Response, next: Function) => {
   record.lastRequest = now;
 
   if (record.requestCount > MAX_REQUESTS_PER_BAN_WINDOW) {
+    console.log(
+      `[SECURITY] IP banned for excessive requests: ${ip} (${record.requestCount} requests in 5 min)`
+    );
     banIp(ip, BAN_DURATION_HOURS);
     requestRecords.delete(ip); // Clear memory record as DB handles ban now
     return res.status(403).json({
@@ -187,6 +200,10 @@ app.post("/api/vote", rateLimiter, (req: Request, res: Response) => {
 
     const { totalVotes } = registerVote(trimmedName, trimmedMessage);
 
+    console.log(
+      `[VOTE] New vote registered for "${trimmedName}" (total: ${totalVotes})`
+    );
+
     // Emit new vote event to all connected clients
     io.emit("new_vote", {
       playerName: trimmedName,
@@ -202,7 +219,7 @@ app.post("/api/vote", rateLimiter, (req: Request, res: Response) => {
       totalVotes,
     });
   } catch (error) {
-    console.error("Error registering vote:", error);
+    console.error("[ERROR] Failed to register vote:", error);
     res.status(500).json({
       success: false,
       error: "Internal server error",
@@ -220,7 +237,7 @@ app.get("/api/leaderboard", (req: Request, res: Response) => {
       leaderboard,
     });
   } catch (error) {
-    console.error("Error fetching leaderboard:", error);
+    console.error("[ERROR] Failed to fetch leaderboard:", error);
     res.status(500).json({
       success: false,
       error: "Internal server error",
@@ -238,7 +255,7 @@ app.get("/api/recent", (req: Request, res: Response) => {
       recentReports,
     });
   } catch (error) {
-    console.error("Error fetching recent reports:", error);
+    console.error("[ERROR] Failed to fetch recent reports:", error);
     res.status(500).json({
       success: false,
       error: "Internal server error",
@@ -271,7 +288,10 @@ app.get("/api/player/:playerName", (req: Request, res: Response) => {
       player,
     });
   } catch (error) {
-    console.error("Error fetching player details:", error);
+    console.error(
+      `[ERROR] Failed to fetch player details for "${req.params.playerName}":`,
+      error
+    );
     res.status(500).json({
       success: false,
       error: "Internal server error",
@@ -298,7 +318,10 @@ app.get("/api/search", (req: Request, res: Response) => {
       results,
     });
   } catch (error) {
-    console.error("Error searching players:", error);
+    console.error(
+      `[ERROR] Failed to search players (query: "${req.query.q}"):`,
+      error
+    );
     res.status(500).json({
       success: false,
       error: "Internal server error",
@@ -316,9 +339,13 @@ app.get("/health", (req: Request, res: Response) => {
 // POST /api/admin/login - Verify admin key
 app.post("/api/admin/login", (req: Request, res: Response) => {
   const { key } = req.body;
+  const ip = req.socket.remoteAddress;
+
   if (verifyAdmin(key)) {
+    console.log(`[ADMIN] Successful admin login from ${ip}`);
     res.json({ success: true, token: key });
   } else {
+    console.log(`[ADMIN] Failed admin login attempt from ${ip}`);
     res.status(401).json({ success: false, error: "Invalid credentials" });
   }
 });
@@ -337,6 +364,7 @@ app.get("/api/admin/reports", adminAuth, (req: Request, res: Response) => {
 
     res.json({ success: true, reports });
   } catch (error) {
+    console.error("[ADMIN] Error fetching reports:", error);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
@@ -353,9 +381,12 @@ app.delete(
           .status(400)
           .json({ success: false, error: "Player name required" });
       }
-      deletePlayerReports(decodeURIComponent(playerName));
+      const decodedName = decodeURIComponent(playerName);
+      deletePlayerReports(decodedName);
+      console.log(`[ADMIN] Deleted all reports for player "${decodedName}"`);
       res.json({ success: true, message: "Player reports deleted" });
     } catch (error) {
+      console.error(`[ADMIN] Error deleting player reports:`, error);
       res.status(500).json({ success: false, error: "Internal server error" });
     }
   }
@@ -369,8 +400,10 @@ app.delete(
     try {
       const { id } = req.params;
       deleteReport(Number(id));
+      console.log(`[ADMIN] Deleted report ID: ${id}`);
       res.json({ success: true, message: "Report deleted" });
     } catch (error) {
+      console.error(`[ADMIN] Error deleting report ${req.params.id}:`, error);
       res.status(500).json({ success: false, error: "Internal server error" });
     }
   }
@@ -382,6 +415,7 @@ app.get("/api/admin/bans", adminAuth, (req: Request, res: Response) => {
     const bans = getBans();
     res.json({ success: true, bans });
   } catch (error) {
+    console.error("[ADMIN] Error fetching bans:", error);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
@@ -393,17 +427,26 @@ app.delete("/api/admin/bans/:ip", adminAuth, (req: Request, res: Response) => {
     if (!ip) {
       return res.status(400).json({ success: false, error: "IP required" });
     }
-    revokeBan(decodeURIComponent(ip));
+    const decodedIp = decodeURIComponent(ip);
+    revokeBan(decodedIp);
+    console.log(`[ADMIN] Revoked ban for IP: ${decodedIp}`);
     res.json({ success: true, message: "Ban revoked" });
   } catch (error) {
+    console.error(`[ADMIN] Error revoking ban:`, error);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
 // Start server
 httpServer.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Arc Riders voting API running on http://localhost:${PORT}`);
+  console.log(`========================================`);
+  console.log(`🚀 Arc Riders voting API running`);
+  console.log(`   Port: ${PORT}`);
+  console.log(`   CORS: ${CORS_ORIGINS ? "Enabled" : "Disabled"}`);
+  console.log(`   Database: ${getDatabasePath()}`);
+  console.log(`========================================`);
   console.log(`📊 Leaderboard: http://localhost:${PORT}/api/leaderboard`);
   console.log(`🗳️  Vote endpoint: POST http://localhost:${PORT}/api/vote`);
   console.log(`🕵️  Admin endpoint: http://localhost:${PORT}/api/admin`);
+  console.log(`========================================`);
 });
