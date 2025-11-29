@@ -74,9 +74,9 @@ export type Config = z.infer<typeof EnvSchema>;
 // Helpers para acceder a la configuración
 export const getAdminPassword = () => config.ADMIN_PASSWORD;
 export const getCorsOrigins = () =>
-  config.CORS_ORIGINS
+  config.CORS_ORIGINS && config.CORS_ORIGINS.trim() !== ""
     ? config.CORS_ORIGINS.split(",").map((origin) => origin.trim())
-    : ["http://localhost:5173", "http://localhost:5174"];
+    : null;
 export const getPort = () => config.PORT;
 export const getDatabasePath = () => config.DATABASE_PATH;
 export const isProduction = () => config.NODE_ENV === "production";

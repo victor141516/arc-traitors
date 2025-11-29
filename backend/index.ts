@@ -28,25 +28,36 @@ const CORS_ORIGINS = getCorsOrigins();
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: CORS_ORIGINS,
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
-});
+
+// Only configure Socket.io CORS if CORS_ORIGINS is defined
+const io = new Server(
+  httpServer,
+  CORS_ORIGINS
+    ? {
+        cors: {
+          origin: CORS_ORIGINS,
+          methods: ["GET", "POST"],
+          credentials: true,
+        },
+      }
+    : {}
+);
 
 const PORT = getPort();
 
 // Middleware
 app.use(express.json());
-app.use(
-  cors({
-    origin: CORS_ORIGINS,
-    methods: ["GET", "POST", "DELETE"],
-    credentials: true,
-  })
-);
+
+// Only apply CORS middleware if CORS_ORIGINS is defined
+if (CORS_ORIGINS) {
+  app.use(
+    cors({
+      origin: CORS_ORIGINS,
+      methods: ["GET", "POST", "DELETE"],
+      credentials: true,
+    })
+  );
+}
 
 // Admin Authentication Middleware
 const adminAuth = (req: Request, res: Response, next: Function) => {

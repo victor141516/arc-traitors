@@ -36,15 +36,15 @@ services:
       - ./caddy_config:/config
     networks:
       - arc-traitors
-    # depends_on:
-    #   backend:
-    #     condition: service_healthy
+    depends_on:
+      backend:
+        condition: service_healthy
     restart: unless-stopped
-    # healthcheck:
-    #   test: ["CMD", "caddy", "version"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   arc-traitors:
