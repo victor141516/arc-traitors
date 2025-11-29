@@ -24,7 +24,8 @@ print_error() {
 # Build frontend
 print_status "Building frontend..."
 cd frontend
-if npm run build; then
+bun install
+if bun run build; then
     print_success "Frontend built successfully"
 else
     print_error "Frontend build failed"
@@ -35,7 +36,8 @@ cd ..
 # Build backoffice
 print_status "Building backoffice..."
 cd backoffice
-if npm run build; then
+bun install
+if bun run build; then
     print_success "Backoffice built successfully"
 else
     print_error "Backoffice build failed"
