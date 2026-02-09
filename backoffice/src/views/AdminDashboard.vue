@@ -7,7 +7,7 @@ interface Report {
   id: number;
   player_name: string;
   message?: string;
-  reporter_ip?: string;
+  reporter_fingerprint?: string;
   voted_at: string;
 }
 
@@ -24,7 +24,7 @@ const activeTab = ref<"reports" | "bans" | "autotest">((route.query.tab as any) 
 const isLoading = ref(false);
 const searchQuery = ref((route.query.q as string) || "");
 const selectedPlayer = ref<string | null>((route.query.player as string) || null);
-const selectedIp = ref<string | null>((route.query.ip as string) || null);
+const selectedFp = ref<string | null>((route.query.fp as string) || null);
 
 const formatDate = (dateString: string) => {
   let isoString = dateString;
@@ -43,18 +43,18 @@ const autoTestStatus = ref<string>("");
 
 const getToken = () => localStorage.getItem("shadow_ops_token");
 
-const fetchReports = async (query?: string, playerFilter?: string, ipFilter?: string) => {
+const fetchReports = async (query?: string, playerFilter?: string, fpFilter?: string) => {
   isLoading.value = true;
   try {
     let urlString = `${config.apiBaseUrl}/api/admin/reports`;
     
-    if (ipFilter) {
-      urlString = `${config.apiBaseUrl}/api/admin/reports/ip/${encodeURIComponent(ipFilter)}`;
+    if (fpFilter) {
+      urlString = `${config.apiBaseUrl}/api/admin/reports/fingerprint/${encodeURIComponent(fpFilter)}`;
     }
     
     const url = new URL(urlString, window.location.origin);
 
-    if (!ipFilter) {
+    if (!fpFilter) {
       // If filtering by player, use player name as search query
       if (playerFilter) {
         url.searchParams.set("q", playerFilter);
@@ -80,15 +80,15 @@ const fetchReports = async (query?: string, playerFilter?: string, ipFilter?: st
 };
 
 const syncStateFromUrl = () => {
-  const { tab, q, player, ip } = route.query;
+  const { tab, q, player, fp } = route.query;
   
   activeTab.value = (tab as any) || "reports";
   searchQuery.value = (q as string) || "";
   selectedPlayer.value = (player as string) || null;
-  selectedIp.value = (ip as string) || null;
+  selectedFp.value = (fp as string) || null;
 
   if (activeTab.value === "reports") {
-    fetchReports(searchQuery.value, selectedPlayer.value || undefined, selectedIp.value || undefined);
+    fetchReports(searchQuery.value, selectedPlayer.value || undefined, selectedFp.value || undefined);
   } else if (activeTab.value === "bans") {
     fetchBans();
   } else if (activeTab.value === "autotest") {
@@ -102,31 +102,31 @@ watch(() => route.query, () => {
 
 const searchReports = () => {
   router.push({
-    query: { ...route.query, q: searchQuery.value.trim() || undefined, player: undefined, ip: undefined }
+    query: { ...route.query, q: searchQuery.value.trim() || undefined, player: undefined, fp: undefined }
   });
 };
 
 const clearSearch = () => {
   router.push({
-    query: { ...route.query, q: undefined, player: undefined, ip: undefined }
+    query: { ...route.query, q: undefined, player: undefined, fp: undefined }
   });
 };
 
 const viewPlayerReports = (playerName: string) => {
   router.push({
-    query: { ...route.query, player: playerName, q: undefined, ip: undefined }
+    query: { ...route.query, player: playerName, q: undefined, fp: undefined }
   });
 };
 
-const viewIpReports = (ip: string) => {
+const viewFpReports = (fp: string) => {
   router.push({
-    query: { ...route.query, ip: ip, q: undefined, player: undefined }
+    query: { ...route.query, fp: fp, q: undefined, player: undefined }
   });
 };
 
 const backToAllReports = () => {
   router.push({
-    query: { ...route.query, q: undefined, player: undefined, ip: undefined }
+    query: { ...route.query, q: undefined, player: undefined, fp: undefined }
   });
 };
 
@@ -367,7 +367,7 @@ onMounted(() => {
     <!-- Search and Navigation -->
     <div v-if="activeTab === 'reports'" class="mb-4 space-y-4">
       <!-- Search Bar -->
-      <div class="flex gap-2" v-if="!selectedPlayer && !selectedIp">
+      <div class="flex gap-2" v-if="!selectedPlayer && !selectedFp">
         <input
           v-model="searchQuery"
           @keyup.enter="searchReports"
@@ -388,9 +388,9 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- Selected Player/IP View -->
+      <!-- Selected Player/FP View -->
       <div
-        v-if="selectedPlayer || selectedIp"
+        v-if="selectedPlayer || selectedFp"
         class="border border-blue-900/30 bg-blue-900/5 p-3"
       >
         <div class="flex items-center justify-between">
@@ -404,8 +404,8 @@ onMounted(() => {
             <div class="text-blue-300 font-bold" v-if="selectedPlayer">
               VIEWING REPORTS FOR PLAYER: {{ selectedPlayer }}
             </div>
-            <div class="text-blue-300 font-bold" v-else-if="selectedIp">
-              VIEWING REPORTS FROM IP: {{ selectedIp }}
+            <div class="text-blue-300 font-bold" v-else-if="selectedFp">
+              VIEWING REPORTS FROM UID: {{ selectedFp }}
             </div>
           </div>
           <button
@@ -459,18 +459,18 @@ onMounted(() => {
               >
                 {{ report.player_name }}
               </button>
-              <button
-                @click="viewIpReports(report.reporter_ip)"
-                v-if="report.reporter_ip"
-                class="text-[10px] text-blue-500/50 hover:text-blue-400 transition-colors px-1 border border-blue-900/30 hover:border-blue-500/50"
-                :class="{
-                  'text-blue-100 border-blue-500':
-                    selectedIp === report.reporter_ip,
-                }"
+              <div
+                @click="viewFpReports(report.reporter_fingerprint)"
+                v-if="report.reporter_fingerprint"
+                class="text-[10px] font-mono mt-1 cursor-pointer transition-colors break-all"
+                :class="
+                  selectedFp === report.reporter_fingerprint
+                    ? 'text-yellow-400 font-bold'
+                    : 'text-gray-500 hover:text-gray-300'
+                "
               >
-                IP: {{ report.reporter_ip }}
-              </button>
-              <span v-else class="text-[10px] text-blue-500/20">IP: UNKNOWN</span>
+                UID: {{ report.reporter_fingerprint }}
+              </div>
             </div>
             <div
               v-if="report.message"

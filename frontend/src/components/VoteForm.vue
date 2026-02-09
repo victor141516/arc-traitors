@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { config } from "../config";
+import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 const playerName = ref("");
 const reportMessage = ref("");
@@ -11,6 +12,14 @@ const messageType = ref<"success" | "error" | "">("");
 const emit = defineEmits<{
   voteSuccess: [];
 }>();
+
+const fingerprint = ref("");
+
+onMounted(async () => {
+  const fp = await FingerprintJS.load();
+  const result = await fp.get();
+  fingerprint.value = result.visitorId;
+});
 
 const submitVote = async () => {
   if (!playerName.value.trim()) {
@@ -32,6 +41,7 @@ const submitVote = async () => {
       body: JSON.stringify({
         playerName: playerName.value.trim(),
         message: reportMessage.value.trim(),
+        fingerprint: fingerprint.value,
       }),
     });
 

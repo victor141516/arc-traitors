@@ -20,7 +20,7 @@ import {
   searchAdminReports,
   getBans,
   revokeBan,
-  getAdminReportsByIp,
+  getAdminReportsByFingerprint,
 } from "./admin";
 import {
   startAutoTest,
@@ -190,10 +190,7 @@ io.on("connection", (socket) => {
 // POST /api/vote - Register a vote for a player
 app.post("/api/vote", rateLimiter, (req: Request, res: Response) => {
   try {
-    const { playerName, message } = req.body;
-    const ip = (req.headers["x-forwarded-for"] ||
-      req.socket.remoteAddress ||
-      "unknown") as string;
+    const { playerName, message, fingerprint } = req.body;
 
     if (!playerName || typeof playerName !== "string") {
       return res.status(400).json({
@@ -218,7 +215,7 @@ app.post("/api/vote", rateLimiter, (req: Request, res: Response) => {
       }
     }
 
-    const { totalVotes } = registerVote(trimmedName, trimmedMessage, ip);
+    const { totalVotes } = registerVote(trimmedName, trimmedMessage, fingerprint);
 
     console.log(
       `[VOTE] New vote registered for "${trimmedName}" (total: ${totalVotes})`
@@ -430,18 +427,18 @@ app.get("/api/admin/reports", adminAuth, (req: Request, res: Response) => {
   }
 });
 
-// GET /api/admin/reports/ip/:ip - Get all reports from a specific IP
-app.get("/api/admin/reports/ip/:ip", adminAuth, (req: Request, res: Response) => {
+// GET /api/admin/reports/fingerprint/:fp - Get all reports from a specific fingerprint
+app.get("/api/admin/reports/fingerprint/:fp", adminAuth, (req: Request, res: Response) => {
   try {
-    const { ip } = req.params;
-    if (!ip) {
-      return res.status(400).json({ success: false, error: "IP required" });
+    const { fp } = req.params;
+    if (!fp) {
+      return res.status(400).json({ success: false, error: "Fingerprint required" });
     }
-    const decodedIp = decodeURIComponent(ip);
-    const reports = getAdminReportsByIp(decodedIp);
+    const decodedFp = decodeURIComponent(fp);
+    const reports = getAdminReportsByFingerprint(decodedFp);
     res.json({ success: true, reports });
   } catch (error) {
-    console.error(`[ADMIN] Error fetching reports for IP ${req.params.ip}:`, error);
+    console.error(`[ADMIN] Error fetching reports for fingerprint ${req.params.fp}:`, error);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 });

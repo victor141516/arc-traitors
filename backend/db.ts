@@ -19,7 +19,7 @@ db.run(`
     player_name TEXT NOT NULL,
     player_name_normalized TEXT,
     message TEXT,
-    reporter_ip TEXT,
+    reporter_fingerprint TEXT,
     voted_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
@@ -68,9 +68,22 @@ try {
   const hasReporterIpColumn = tableInfo.some(
     (col) => col.name === "reporter_ip"
   );
-  if (!hasReporterIpColumn) {
-    console.log("[DB] Migrating: Adding reporter_ip column...");
-    db.run("ALTER TABLE votes ADD COLUMN reporter_ip TEXT");
+  if (hasReporterIpColumn) {
+    console.log("[DB] Migrating: Dropping reporter_ip column...");
+    try {
+      db.run("ALTER TABLE votes DROP COLUMN reporter_ip");
+    } catch (e) {
+      // Fallback for older SQLite versions if needed, though Bun's SQLite usually supports DROP COLUMN
+      console.warn("[DB] DROP COLUMN failed, might be an old SQLite version. Skipping deletion of reporter_ip.");
+    }
+  }
+
+  const hasReporterFingerprintColumn = tableInfo.some(
+    (col) => col.name === "reporter_fingerprint"
+  );
+  if (!hasReporterFingerprintColumn) {
+    console.log("[DB] Migrating: Adding reporter_fingerprint column...");
+    db.run("ALTER TABLE votes ADD COLUMN reporter_fingerprint TEXT");
   }
 } catch (error) {
   console.error("[DB] Error checking/adding columns:", error);
@@ -98,7 +111,7 @@ export interface Vote {
   id: number;
   player_name: string;
   message?: string;
-  reporter_ip?: string;
+  reporter_fingerprint?: string;
   voted_at: string;
 }
 
@@ -112,7 +125,7 @@ export interface RecentReport {
   id: number;
   playerName: string;
   message?: string;
-  reporterIp?: string;
+  reporterFingerprint?: string;
   votedAt: string;
 }
 
@@ -129,14 +142,14 @@ export interface PlayerDetails {
 export function registerVote(
   playerName: string,
   message?: string,
-  reporterIp?: string
+  reporterFingerprint?: string
 ): { totalVotes: number } {
   try {
     const normalizedName = normalizeString(playerName);
     const stmt = db.prepare(
-      "INSERT INTO votes (player_name, player_name_normalized, message, reporter_ip) VALUES (?, ?, ?, ?)"
+      "INSERT INTO votes (player_name, player_name_normalized, message, reporter_fingerprint) VALUES (?, ?, ?, ?)"
     );
-    stmt.run(playerName, normalizedName, message || null, reporterIp || null);
+    stmt.run(playerName, normalizedName, message || null, reporterFingerprint || null);
 
     // Get total votes for this player
     const countStmt = db.prepare(
@@ -178,7 +191,7 @@ export function getLeaderboard(): LeaderboardEntry[] {
  */
 export function getRecentReports(limit: number = 50): RecentReport[] {
   const stmt = db.prepare(`
-    SELECT id, player_name, message, reporter_ip, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at
+    SELECT id, player_name, message, reporter_fingerprint, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at
     FROM votes
     ORDER BY voted_at DESC
     LIMIT ?
@@ -188,7 +201,7 @@ export function getRecentReports(limit: number = 50): RecentReport[] {
     id: number;
     player_name: string;
     message?: string;
-    reporter_ip?: string;
+    reporter_fingerprint?: string;
     voted_at: string;
   }>;
 
@@ -196,7 +209,7 @@ export function getRecentReports(limit: number = 50): RecentReport[] {
     id: entry.id,
     playerName: entry.player_name,
     message: entry.message,
-    reporterIp: entry.reporter_ip,
+    reporterFingerprint: entry.reporter_fingerprint,
     votedAt: entry.voted_at,
   }));
 }
@@ -242,7 +255,7 @@ export function getPlayerDetails(playerName: string): PlayerDetails | null {
 
   // Get reports history
   const reportsStmt = db.prepare(`
-    SELECT id, player_name, message, reporter_ip, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at
+    SELECT id, player_name, message, reporter_fingerprint, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at
     FROM votes
     WHERE player_name = ?
     ORDER BY voted_at DESC
@@ -251,7 +264,7 @@ export function getPlayerDetails(playerName: string): PlayerDetails | null {
     id: number;
     player_name: string;
     message?: string;
-    reporter_ip?: string;
+    reporter_fingerprint?: string;
     voted_at: string;
   }>;
 
@@ -263,7 +276,7 @@ export function getPlayerDetails(playerName: string): PlayerDetails | null {
       id: r.id,
       playerName: r.player_name,
       message: r.message,
-      reporterIp: r.reporter_ip,
+      reporterFingerprint: r.reporter_fingerprint,
       votedAt: r.voted_at,
     })),
   };

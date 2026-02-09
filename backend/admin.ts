@@ -13,7 +13,7 @@ export function verifyAdmin(token: string): boolean {
  */
 export function getAdminReports(limit: number = 100, offset: number = 0) {
   const stmt = db.prepare(`
-    SELECT id, player_name, message, reporter_ip, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
+    SELECT id, player_name, message, reporter_fingerprint, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
     FROM votes
     ORDER BY voted_at DESC
     LIMIT ? OFFSET ?
@@ -57,9 +57,9 @@ export function deletePlayerReports(playerName: string) {
  */
 export function searchAdminReports(query: string) {
   const stmt = db.prepare(`
-    SELECT id, player_name, message, reporter_ip, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
+    SELECT id, player_name, message, reporter_fingerprint, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
     FROM votes
-    WHERE player_name LIKE ? OR message LIKE ? OR reporter_ip LIKE ?
+    WHERE player_name LIKE ? OR message LIKE ? OR reporter_fingerprint LIKE ?
     ORDER BY voted_at DESC
     LIMIT 50
   `);
@@ -90,14 +90,14 @@ export function revokeBan(ip: string) {
   }
 }
 /**
- * Get all reports from a specific IP
+ * Get all reports from a specific fingerprint
  */
-export function getAdminReportsByIp(ip: string) {
+export function getAdminReportsByFingerprint(fingerprint: string) {
   const stmt = db.prepare(`
-    SELECT id, player_name, message, reporter_ip, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
+    SELECT id, player_name, message, reporter_fingerprint, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
     FROM votes
-    WHERE reporter_ip = ?
+    WHERE reporter_fingerprint = ?
     ORDER BY voted_at DESC
   `);
-  return stmt.all(ip);
+  return stmt.all(fingerprint);
 }
