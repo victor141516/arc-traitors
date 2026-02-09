@@ -20,6 +20,7 @@ import {
   searchAdminReports,
   getBans,
   revokeBan,
+  getAdminReportsByIp,
 } from "./admin";
 import {
   startAutoTest,
@@ -47,12 +48,12 @@ const io = new Server(
   httpServer,
   CORS_ORIGINS
     ? {
-        cors: {
-          origin: CORS_ORIGINS,
-          methods: ["GET", "POST"],
-          credentials: true,
-        },
-      }
+      cors: {
+        origin: CORS_ORIGINS,
+        methods: ["GET", "POST"],
+        credentials: true,
+      },
+    }
     : {}
 );
 
@@ -190,6 +191,9 @@ io.on("connection", (socket) => {
 app.post("/api/vote", rateLimiter, (req: Request, res: Response) => {
   try {
     const { playerName, message } = req.body;
+    const ip = (req.headers["x-forwarded-for"] ||
+      req.socket.remoteAddress ||
+      "unknown") as string;
 
     if (!playerName || typeof playerName !== "string") {
       return res.status(400).json({
@@ -214,7 +218,7 @@ app.post("/api/vote", rateLimiter, (req: Request, res: Response) => {
       }
     }
 
-    const { totalVotes } = registerVote(trimmedName, trimmedMessage);
+    const { totalVotes } = registerVote(trimmedName, trimmedMessage, ip);
 
     console.log(
       `[VOTE] New vote registered for "${trimmedName}" (total: ${totalVotes})`
@@ -384,10 +388,9 @@ app.post("/api/admin/login", (req: Request, res: Response) => {
     // Failed login - record attempt
     const result = recordFailedLogin(ip);
     console.log(
-      `[ADMIN] Failed admin login attempt from ${ip} (${
-        result.attemptsLeft !== undefined
-          ? `${result.attemptsLeft} attempts left`
-          : "blocked"
+      `[ADMIN] Failed admin login attempt from ${ip} (${result.attemptsLeft !== undefined
+        ? `${result.attemptsLeft} attempts left`
+        : "blocked"
       })`
     );
 
@@ -423,6 +426,22 @@ app.get("/api/admin/reports", adminAuth, (req: Request, res: Response) => {
     res.json({ success: true, reports });
   } catch (error) {
     console.error("[ADMIN] Error fetching reports:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
+// GET /api/admin/reports/ip/:ip - Get all reports from a specific IP
+app.get("/api/admin/reports/ip/:ip", adminAuth, (req: Request, res: Response) => {
+  try {
+    const { ip } = req.params;
+    if (!ip) {
+      return res.status(400).json({ success: false, error: "IP required" });
+    }
+    const decodedIp = decodeURIComponent(ip);
+    const reports = getAdminReportsByIp(decodedIp);
+    res.json({ success: true, reports });
+  } catch (error) {
+    console.error(`[ADMIN] Error fetching reports for IP ${req.params.ip}:`, error);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 });

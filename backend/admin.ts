@@ -13,7 +13,7 @@ export function verifyAdmin(token: string): boolean {
  */
 export function getAdminReports(limit: number = 100, offset: number = 0) {
   const stmt = db.prepare(`
-    SELECT id, player_name, message, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
+    SELECT id, player_name, message, reporter_ip, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
     FROM votes
     ORDER BY voted_at DESC
     LIMIT ? OFFSET ?
@@ -57,14 +57,14 @@ export function deletePlayerReports(playerName: string) {
  */
 export function searchAdminReports(query: string) {
   const stmt = db.prepare(`
-    SELECT id, player_name, message, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
+    SELECT id, player_name, message, reporter_ip, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
     FROM votes
-    WHERE player_name LIKE ? OR message LIKE ?
+    WHERE player_name LIKE ? OR message LIKE ? OR reporter_ip LIKE ?
     ORDER BY voted_at DESC
     LIMIT 50
   `);
   const searchPattern = `%${query}%`;
-  return stmt.all(searchPattern, searchPattern);
+  return stmt.all(searchPattern, searchPattern, searchPattern);
 }
 
 /**
@@ -88,4 +88,16 @@ export function revokeBan(ip: string) {
     console.error(`[DB] Error revoking ban for IP ${ip}:`, error);
     throw error;
   }
+}
+/**
+ * Get all reports from a specific IP
+ */
+export function getAdminReportsByIp(ip: string) {
+  const stmt = db.prepare(`
+    SELECT id, player_name, message, reporter_ip, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at, player_name_normalized
+    FROM votes
+    WHERE reporter_ip = ?
+    ORDER BY voted_at DESC
+  `);
+  return stmt.all(ip);
 }

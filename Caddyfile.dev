@@ -1,0 +1,37 @@
+# Arc Traitors - Development Caddy Configuration
+# Proxies everything through port 80 (exposed as 8180)
+
+:80 {
+	# API routes - reverse proxy to backend
+	handle /api/* {
+		reverse_proxy backend:33000
+	}
+
+	# Socket.io for real-time features (Backend)
+	handle /socket.io/* {
+		reverse_proxy backend:33000
+	}
+
+	# Admin dashboard (Backoffice)
+	redir /admin /admin/
+	handle /admin/* {
+		reverse_proxy backoffice:5174
+	}
+
+	# Health check endpoint
+	handle /health {
+		reverse_proxy backend:33000
+	}
+
+	# Main frontend
+	handle {
+		reverse_proxy frontend:5173
+	}
+
+	# Logging
+	log {
+		output stdout
+		format console
+		level INFO
+	}
+}

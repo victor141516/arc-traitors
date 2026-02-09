@@ -1,0 +1,72 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: arc-traitors-backend-dev
+    command: bun run dev
+    environment:
+      - DATABASE_PATH=/data/votes.db
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin1234}
+      - CORS_ORIGINS=http://localhost:8180,http://localhost:5173,http://localhost:5174
+      - NODE_ENV=development
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+    # ports:
+    #   - "33000:33000"
+    networks:
+      - arc-traitors
+
+  frontend:
+    image: oven/bun:1.2.14-alpine
+    container_name: arc-traitors-frontend-dev
+    command: bun run dev
+    environment:
+      - BUN_NODE_VERSION=22.12.0
+      - VITE_API_BASE_URL=
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    # ports:
+    #   - "5173:5173"
+    networks:
+      - arc-traitors
+    depends_on:
+      - backend
+
+  backoffice:
+    image: oven/bun:1.2.14-alpine
+    container_name: arc-traitors-backoffice-dev
+    command: bun run dev
+    environment:
+      - BUN_NODE_VERSION=22.12.0
+      - VITE_API_BASE_URL=
+    working_dir: /app
+    volumes:
+      - ./backoffice:/app
+    # ports:
+    #   - "5174:5174"
+    networks:
+      - arc-traitors
+    depends_on:
+      - backend
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: arc-traitors-caddy-dev
+    ports:
+      - "8180:80"
+    volumes:
+      - ./Caddyfile.dev:/etc/caddy/Caddyfile:ro
+    networks:
+      - arc-traitors
+    depends_on:
+      - backend
+      - frontend
+      - backoffice
+
+networks:
+  arc-traitors:
+    driver: bridge
+    name: arc-traitors-network-dev

@@ -23,7 +23,7 @@ services:
     image: caddy:2-alpine
     container_name: arc-traitors-caddy
     ports:
-      - "80:80"
+      - "8180:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./dist/public:/var/www/public:ro

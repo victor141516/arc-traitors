@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { ref, onMounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { config } from "../config";
 
 interface Report {
   id: number;
   player_name: string;
   message?: string;
+  reporter_ip?: string;
   voted_at: string;
 }
 
@@ -16,12 +17,14 @@ interface Ban {
 }
 
 const router = useRouter();
+const route = useRoute();
 const reports = ref<Report[]>([]);
 const bans = ref<Ban[]>([]);
-const activeTab = ref<"reports" | "bans" | "autotest">("reports");
+const activeTab = ref<"reports" | "bans" | "autotest">((route.query.tab as any) || "reports");
 const isLoading = ref(false);
-const searchQuery = ref("");
-const selectedPlayer = ref<string | null>(null);
+const searchQuery = ref((route.query.q as string) || "");
+const selectedPlayer = ref<string | null>((route.query.player as string) || null);
+const selectedIp = ref<string | null>((route.query.ip as string) || null);
 
 const formatDate = (dateString: string) => {
   let isoString = dateString;
@@ -40,16 +43,24 @@ const autoTestStatus = ref<string>("");
 
 const getToken = () => localStorage.getItem("shadow_ops_token");
 
-const fetchReports = async (query?: string, playerFilter?: string) => {
+const fetchReports = async (query?: string, playerFilter?: string, ipFilter?: string) => {
   isLoading.value = true;
   try {
-    const url = new URL(`${config.apiBaseUrl}/api/admin/reports`);
+    let urlString = `${config.apiBaseUrl}/api/admin/reports`;
+    
+    if (ipFilter) {
+      urlString = `${config.apiBaseUrl}/api/admin/reports/ip/${encodeURIComponent(ipFilter)}`;
+    }
+    
+    const url = new URL(urlString, window.location.origin);
 
-    // If filtering by player, use player name as search query
-    if (playerFilter) {
-      url.searchParams.set("q", playerFilter);
-    } else if (query) {
-      url.searchParams.set("q", query);
+    if (!ipFilter) {
+      // If filtering by player, use player name as search query
+      if (playerFilter) {
+        url.searchParams.set("q", playerFilter);
+      } else if (query) {
+        url.searchParams.set("q", query);
+      }
     }
 
     const res = await fetch(url.toString(), {
@@ -60,7 +71,7 @@ const fetchReports = async (query?: string, playerFilter?: string) => {
       return;
     }
     const data = await res.json();
-    reports.value = data.reports;
+    reports.value = data.reports || [];
   } catch (e) {
     console.error(e);
   } finally {
@@ -68,30 +79,55 @@ const fetchReports = async (query?: string, playerFilter?: string) => {
   }
 };
 
-const searchReports = () => {
-  if (searchQuery.value.trim()) {
-    fetchReports(searchQuery.value);
-  } else {
-    fetchReports();
+const syncStateFromUrl = () => {
+  const { tab, q, player, ip } = route.query;
+  
+  activeTab.value = (tab as any) || "reports";
+  searchQuery.value = (q as string) || "";
+  selectedPlayer.value = (player as string) || null;
+  selectedIp.value = (ip as string) || null;
+
+  if (activeTab.value === "reports") {
+    fetchReports(searchQuery.value, selectedPlayer.value || undefined, selectedIp.value || undefined);
+  } else if (activeTab.value === "bans") {
+    fetchBans();
+  } else if (activeTab.value === "autotest") {
+    fetchAutoTestStatus();
   }
 };
 
+watch(() => route.query, () => {
+  syncStateFromUrl();
+}, { deep: true });
+
+const searchReports = () => {
+  router.push({
+    query: { ...route.query, q: searchQuery.value.trim() || undefined, player: undefined, ip: undefined }
+  });
+};
+
 const clearSearch = () => {
-  searchQuery.value = "";
-  selectedPlayer.value = null;
-  fetchReports();
+  router.push({
+    query: { ...route.query, q: undefined, player: undefined, ip: undefined }
+  });
 };
 
 const viewPlayerReports = (playerName: string) => {
-  selectedPlayer.value = playerName;
-  searchQuery.value = "";
-  fetchReports(undefined, playerName);
+  router.push({
+    query: { ...route.query, player: playerName, q: undefined, ip: undefined }
+  });
+};
+
+const viewIpReports = (ip: string) => {
+  router.push({
+    query: { ...route.query, ip: ip, q: undefined, player: undefined }
+  });
 };
 
 const backToAllReports = () => {
-  selectedPlayer.value = null;
-  searchQuery.value = "";
-  fetchReports();
+  router.push({
+    query: { ...route.query, q: undefined, player: undefined, ip: undefined }
+  });
 };
 
 const fetchBans = async () => {
@@ -119,13 +155,7 @@ const deleteReport = async (id: number) => {
     });
 
     // Refresh current view
-    if (selectedPlayer.value) {
-      viewPlayerReports(selectedPlayer.value);
-    } else if (searchQuery.value) {
-      searchReports();
-    } else {
-      fetchReports();
-    }
+    syncStateFromUrl();
   } catch (e) {
     console.error(e);
   }
@@ -266,7 +296,7 @@ onMounted(() => {
     router.push("/");
     return;
   }
-  fetchReports();
+  syncStateFromUrl();
   fetchAutoTestStatus();
 });
 </script>
@@ -295,9 +325,7 @@ onMounted(() => {
     <div class="flex gap-4 mb-6">
       <button
         @click="
-          activeTab = 'reports';
-          clearSearch();
-          fetchReports();
+          router.push({ query: { tab: 'reports' } });
         "
         class="px-4 py-2 text-sm border transition-colors"
         :class="
@@ -310,8 +338,7 @@ onMounted(() => {
       </button>
       <button
         @click="
-          activeTab = 'bans';
-          fetchBans();
+          router.push({ query: { tab: 'bans' } });
         "
         class="px-4 py-2 text-sm border transition-colors"
         :class="
@@ -324,8 +351,7 @@ onMounted(() => {
       </button>
       <button
         @click="
-          activeTab = 'autotest';
-          fetchAutoTestStatus();
+          router.push({ query: { tab: 'autotest' } });
         "
         class="px-4 py-2 text-sm border transition-colors"
         :class="
@@ -341,7 +367,7 @@ onMounted(() => {
     <!-- Search and Navigation -->
     <div v-if="activeTab === 'reports'" class="mb-4 space-y-4">
       <!-- Search Bar -->
-      <div class="flex gap-2" v-if="!selectedPlayer">
+      <div class="flex gap-2" v-if="!selectedPlayer && !selectedIp">
         <input
           v-model="searchQuery"
           @keyup.enter="searchReports"
@@ -362,9 +388,9 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- Selected Player View -->
+      <!-- Selected Player/IP View -->
       <div
-        v-if="selectedPlayer"
+        v-if="selectedPlayer || selectedIp"
         class="border border-blue-900/30 bg-blue-900/5 p-3"
       >
         <div class="flex items-center justify-between">
@@ -375,11 +401,15 @@ onMounted(() => {
             >
               ← BACK TO ALL REPORTS
             </button>
-            <div class="text-blue-300 font-bold">
-              VIEWING REPORTS FOR: {{ selectedPlayer }}
+            <div class="text-blue-300 font-bold" v-if="selectedPlayer">
+              VIEWING REPORTS FOR PLAYER: {{ selectedPlayer }}
+            </div>
+            <div class="text-blue-300 font-bold" v-else-if="selectedIp">
+              VIEWING REPORTS FROM IP: {{ selectedIp }}
             </div>
           </div>
           <button
+            v-if="selectedPlayer"
             @click="deletePlayerReports(selectedPlayer)"
             class="text-xs text-red-500 hover:text-red-400 border border-red-900/30 px-3 py-1 hover:bg-red-900/10"
           >
@@ -418,16 +448,30 @@ onMounted(() => {
             {{ formatDate(report.voted_at) }}
           </div>
           <div class="flex-grow">
-            <button
-              @click="viewPlayerReports(report.player_name)"
-              class="font-bold text-blue-300 hover:text-blue-100 transition-colors cursor-pointer text-left"
-              :class="{
-                'underline text-blue-100':
-                  selectedPlayer === report.player_name,
-              }"
-            >
-              {{ report.player_name }}
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                @click="viewPlayerReports(report.player_name)"
+                class="font-bold text-blue-300 hover:text-blue-100 transition-colors cursor-pointer text-left"
+                :class="{
+                  'underline text-blue-100':
+                    selectedPlayer === report.player_name,
+                }"
+              >
+                {{ report.player_name }}
+              </button>
+              <button
+                @click="viewIpReports(report.reporter_ip)"
+                v-if="report.reporter_ip"
+                class="text-[10px] text-blue-500/50 hover:text-blue-400 transition-colors px-1 border border-blue-900/30 hover:border-blue-500/50"
+                :class="{
+                  'text-blue-100 border-blue-500':
+                    selectedIp === report.reporter_ip,
+                }"
+              >
+                IP: {{ report.reporter_ip }}
+              </button>
+              <span v-else class="text-[10px] text-blue-500/20">IP: UNKNOWN</span>
+            </div>
             <div
               v-if="report.message"
               class="text-sm text-blue-400/80 mt-1 border-l-2 border-blue-500/30 pl-2"

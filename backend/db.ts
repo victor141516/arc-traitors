@@ -19,6 +19,7 @@ db.run(`
     player_name TEXT NOT NULL,
     player_name_normalized TEXT,
     message TEXT,
+    reporter_ip TEXT,
     voted_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
@@ -63,6 +64,14 @@ try {
     })();
     console.log("[DB] Migration: Normalized names backfilled.");
   }
+
+  const hasReporterIpColumn = tableInfo.some(
+    (col) => col.name === "reporter_ip"
+  );
+  if (!hasReporterIpColumn) {
+    console.log("[DB] Migrating: Adding reporter_ip column...");
+    db.run("ALTER TABLE votes ADD COLUMN reporter_ip TEXT");
+  }
 } catch (error) {
   console.error("[DB] Error checking/adding columns:", error);
 }
@@ -89,6 +98,7 @@ export interface Vote {
   id: number;
   player_name: string;
   message?: string;
+  reporter_ip?: string;
   voted_at: string;
 }
 
@@ -102,6 +112,7 @@ export interface RecentReport {
   id: number;
   playerName: string;
   message?: string;
+  reporterIp?: string;
   votedAt: string;
 }
 
@@ -117,14 +128,15 @@ export interface PlayerDetails {
  */
 export function registerVote(
   playerName: string,
-  message?: string
+  message?: string,
+  reporterIp?: string
 ): { totalVotes: number } {
   try {
     const normalizedName = normalizeString(playerName);
     const stmt = db.prepare(
-      "INSERT INTO votes (player_name, player_name_normalized, message) VALUES (?, ?, ?)"
+      "INSERT INTO votes (player_name, player_name_normalized, message, reporter_ip) VALUES (?, ?, ?, ?)"
     );
-    stmt.run(playerName, normalizedName, message || null);
+    stmt.run(playerName, normalizedName, message || null, reporterIp || null);
 
     // Get total votes for this player
     const countStmt = db.prepare(
@@ -166,7 +178,7 @@ export function getLeaderboard(): LeaderboardEntry[] {
  */
 export function getRecentReports(limit: number = 50): RecentReport[] {
   const stmt = db.prepare(`
-    SELECT id, player_name, message, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at
+    SELECT id, player_name, message, reporter_ip, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at
     FROM votes
     ORDER BY voted_at DESC
     LIMIT ?
@@ -176,6 +188,7 @@ export function getRecentReports(limit: number = 50): RecentReport[] {
     id: number;
     player_name: string;
     message?: string;
+    reporter_ip?: string;
     voted_at: string;
   }>;
 
@@ -183,6 +196,7 @@ export function getRecentReports(limit: number = 50): RecentReport[] {
     id: entry.id,
     playerName: entry.player_name,
     message: entry.message,
+    reporterIp: entry.reporter_ip,
     votedAt: entry.voted_at,
   }));
 }
@@ -228,7 +242,7 @@ export function getPlayerDetails(playerName: string): PlayerDetails | null {
 
   // Get reports history
   const reportsStmt = db.prepare(`
-    SELECT id, player_name, message, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at
+    SELECT id, player_name, message, reporter_ip, strftime('%Y-%m-%dT%H:%M:%SZ', voted_at) as voted_at
     FROM votes
     WHERE player_name = ?
     ORDER BY voted_at DESC
@@ -237,6 +251,7 @@ export function getPlayerDetails(playerName: string): PlayerDetails | null {
     id: number;
     player_name: string;
     message?: string;
+    reporter_ip?: string;
     voted_at: string;
   }>;
 
@@ -248,6 +263,7 @@ export function getPlayerDetails(playerName: string): PlayerDetails | null {
       id: r.id,
       playerName: r.player_name,
       message: r.message,
+      reporterIp: r.reporter_ip,
       votedAt: r.voted_at,
     })),
   };
@@ -319,5 +335,6 @@ export function searchPlayers(
     votes: entry.votes,
   }));
 }
+
 
 export default db;
